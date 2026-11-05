@@ -105,6 +105,16 @@ The SDK automatically selects the best available flow:
 1. **Telegram App (preferred)** — If installed, the user is redirected to the Telegram app for authorization. After approval, the user is sent back to your app via the Redirect URI.
 2. **In-App Web Auth (fallback)** — If Telegram is not installed, the SDK presents a secure `ASWebAuthenticationSession` sheet. The callback is handled internally and the result is delivered through the same completion handler.
 
+#### Binding the Token with a Nonce
+
+Pass a `nonce` to bind the id_token to one login. It is sent unchanged as the OIDC `nonce` parameter and returned in the id_token's `nonce` claim, so your backend can reject a token issued for another request.
+
+```swift
+TelegramLogin.login(nonce: serverNonce) { result in
+    // Verify that the id_token's `nonce` claim equals serverNonce.
+}
+```
+
 #### Intercepting the Callback (Telegram App Flow)
 
 When the user approves login in the Telegram app, iOS opens your app using the Redirect URI. You must pass this URL to the SDK so it can exchange the authorization code for a token.

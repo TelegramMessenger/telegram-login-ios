@@ -53,6 +53,7 @@ public enum TelegramLogin {
     private static var _pendingCompletion: (@Sendable (Result<LoginData, Error>) -> Void)?
     private static var _authSession: ASWebAuthenticationSession?
     private static var _codeVerifier: String?
+    private static var _nonce: String?
 
     private static let baseURL = "https://oauth.telegram.org"
 
@@ -71,9 +72,11 @@ public enum TelegramLogin {
             fallbackScheme: fallbackScheme
         )
     }
-    /// Start the Telegram login flow.    
+    /// Start the Telegram login flow. `nonce` is passed unchanged as the OIDC nonce and
+    /// returned in the id_token's `nonce` claim, binding the token to this login.
     @MainActor
     public static func login(
+        nonce: String? = nil,
         completion: @escaping @Sendable (Result<LoginData, Error>) -> Void
     ) {
         guard let config = _configuration else {
@@ -83,6 +86,7 @@ public enum TelegramLogin {
 
         _pendingCompletion = completion
         _codeVerifier = generateCodeVerifier()
+        _nonce = nonce
 
         Task {
             await performLogin(config: config, completion: completion)
@@ -215,6 +219,9 @@ public enum TelegramLogin {
             queryItems.append(URLQueryItem(name: "code_challenge", value: codeChallenge(for: verifier)))
             queryItems.append(URLQueryItem(name: "code_challenge_method", value: "S256"))
         }
+        if let nonce = _nonce {
+            queryItems.append(URLQueryItem(name: "nonce", value: nonce))
+        }
         components.queryItems = queryItems
 
         guard let url = components.url else { return nil }
@@ -243,6 +250,9 @@ public enum TelegramLogin {
         if let verifier = _codeVerifier {
             queryItems.append(URLQueryItem(name: "code_challenge", value: codeChallenge(for: verifier)))
             queryItems.append(URLQueryItem(name: "code_challenge_method", value: "S256"))
+        }
+        if let nonce = _nonce {
+            queryItems.append(URLQueryItem(name: "nonce", value: nonce))
         }
         components.queryItems = queryItems
         return components.url
